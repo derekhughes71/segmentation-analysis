@@ -1,0 +1,499 @@
+
+setwd("C:/Users/Dman/Desktop/Documents/Classes/Northwestern/PRED 450 - Marketing Analytics/assignments")
+
+load("apphappyData.RData")
+ls()
+## [1] "apphappy.2.labs.frame" "apphappy.2.num.frame" ##
+require(cluster)
+require(useful)
+require(Hmisc)
+library(HSAUR)
+
+# create data frame for dataset
+numdata <- apphappy.3.num.frame
+
+
+
+# remove observations with NA in their responses
+numdata.na = na.omit(numdata)
+head(numdata.na)
+str(numdata.na)
+
+
+### Following are EDA
+
+str(numdata)
+head(numdata) # display first 6 obs
+tail(numdata) # display last 6 obs
+summary(numdata) # summary of data set (quantiles, mean, median, min, max each variable)
+
+# barplot() of single variable
+a=table(numdata$q1)
+a
+barplot(a)
+
+# histogram of single variable
+hist(numdata$q1)
+
+# barplot() comparing two variables
+b=table(numdata$q1,numdata$q2r1)
+b
+barplot(b)
+
+
+
+
+
+
+### Creating subsets ###
+
+
+#### 1 ###
+# all attitudinal variables included from q24-q26
+numsub <- subset(numdata, select=c("q24r1","q24r2","q24r3","q24r4","q24r5","q24r6","q24r7",
+                                   "q24r8","q24r9","q24r10","q24r11","q24r12",
+                                   "q25r1","q25r2","q25r3","q25r4","q25r5","q25r6",
+                                   "q25r7","q25r8","q25r9","q25r10","q25r11","q25r12",
+                                   "q26r3","q26r4","q26r5","q26r6",
+                                   "q26r7","q26r8","q26r9","q26r10","q26r11","q26r12",
+                                   "q26r13","q26r14","q26r15","q26r16","q26r17","q26r18"))
+
+
+#### 2 ####
+# subset with removed variables that did not show natural clustering (skewed) with barplot()
+numsub.skew <- subset(numdata, select=c("q24r2","q24r3","q24r5","q24r6","q24r7",
+                                        "q24r8","q24r10","q24r11","q24r12",
+                                        "q25r1","q25r2","q25r3","q25r4","q25r5","q25r6",
+                                        "q25r7","q25r8","q25r9","q25r10","q25r11","q25r12",
+                                        "q26r3","q26r4","q26r5","q26r6",
+                                        "q26r7","q26r9","q26r10","q26r12",
+                                        "q26r14","q26r15","q26r16","q26r17","q26r18"))
+
+
+# checking individual variables for definitive skewing which indicates natural clustering for variable
+a=table(numsub$q26r18)
+a
+barplot(a)
+
+# run on numsub -
+# removed: q24- 1,4,9,
+# removed: q25- none
+# removed: q26- 8,11,13
+
+
+
+
+
+#### 3 ####
+# ran correlations between skewed variables for higher than .40 correlation
+numsub.skew.40 <- subset(numdata, select=c("q24r2","q24r3","q24r7",
+                                           "q24r8","q24r10","q24r11","q24r12",
+                                           "q25r1","q25r2","q25r3","q25r4","q25r5",
+                                           "q25r7","q25r8","q25r9","q25r10","q25r11",
+                                           "q26r4","q26r5","q26r6",
+                                           "q26r7","q26r9","q26r10","q26r12",
+                                           "q26r14","q26r15","q26r16","q26r17","q26r18"))
+
+
+### creating correlation summaries and plots to determine which variables are correlated to others
+# look for variables with no positive correlations greater than .40
+rcorr(as.matrix(numsub.skew.40), type="pearson")
+
+# quantitatively see groupings on correlation plot of variables
+# use output to decide how to combine variables (those highly correlated)
+require(corrplot)
+numsubcorrelation <- cor(numsub.skew.40)
+corrplot(numsubcorrelation)
+
+# compare correlations between variables that may be grouped together
+cor(numsub$q24r11,numsub$q24r10)
+
+
+mcor <- cor(numsub)
+corrplot(mcor, method="shade", shade.col=NA, tl.col="black")
+
+corrplot(numsubcorrelation, method="shade", addCoef.col="black", 
+         addCoefasPercent=TRUE ,type="lower", shade.col=NA, tl.col="black", 
+         tl.srt=45, addcolorlabel="no", order="AOE",insig = "p-value")
+
+# run on numsub.skew -
+# removed: q24- 
+# removed: q25- 
+# removed: q26- 
+
+
+
+
+
+
+#### 4 ####
+# subset with grouped variables
+numsub.skew.40.group <- subset(numdata, select=c("q24r2","q24r3","q24r7",
+                                                 "q24r8",
+                                                 "q25r2",
+                                                 "q25r9","q25r10","q25r11",
+                                                 "q26r5","q26r6",
+                                                 "q26r9",
+                                                 "q26r17"))
+
+# grouped variables added to group subset
+numsub.skew.40.group$friends = (numsub$q24r10+numsub$q24r11+numsub$q24r12)/3
+numsub.skew.40.group$leader = (numsub$q25r1+numsub$q25r3+numsub$q25r4+numsub$q25r7)/4
+numsub.skew.40.group$risk = (numsub$q25r5+numsub$q25r8)/2
+numsub.skew.40.group$luxury = (numsub$q26r7+numsub$q26r14+numsub$q26r15+numsub$q26r18)/4
+numsub.skew.40.group$apps = (numsub$q26r10+numsub$q26r12)/2
+numsub.skew.40.group$shopper = (numsub$q26r4+numsub$q26r16)/2
+
+
+# run on numsub.skew.40 -
+# removed: q24- 1,4,9,
+# removed: q25- none
+# removed: q26- 8,11,13
+
+
+
+
+# remove observations with NA in their responses
+numsub.skew.40.group = na.omit(numsub.skew.40.group)
+head(numsub.skew.40.group.na)
+str(numsub.skew.40.group.na)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Create a 'scree' plot to determine the num of clusters
+
+wssplot <- function(numsub.skew.40.group, nc=19, seed=1234) {
+  wss <- (nrow(numsub.skew.40.group)-1)*sum(apply(numsub.skew.40.group,2,var))
+  for (i in 2:nc) {
+    set.seed(seed)
+    wss[i] <- sum(kmeans(numsub.skew.40.group, centers=i)$withinss)}
+  plot(1:nc, wss, type="b", xlab="Number of Clusters",
+       ylab="Within groups sum of squares")} 
+
+wssplot(numsub.skew.40.group)
+
+### Create a Kmeans with 8 clusters
+
+clusterresults <- kmeans(numsub.skew.40.group,8)
+#clusterresults
+clusterresults$withinss
+clusterresults$tot.withinss
+clusterresults$totss
+clusterresults$betweenss
+clusterresults$size
+
+clusterresults$withinss/clusterresults$tot.withinss
+clusterresults$betweenss/clusterresults$totss
+
+
+
+
+
+
+### Create a PC (Principal Componenet plot)
+# R automatically calcs PC this way when we use K-means
+plot(clusterresults, data=numsub.skew.40.group)
+
+
+
+# used to display frequency and average distance from centroid(?)
+# another way to determine cluster quality
+# values closer to 1 indicate good clusters, closer to 0 indicate bad clusters
+dissE <- daisy(numsub.skew.40.group) 
+dE2   <- dissE^2
+sk2   <- silhouette(clusterresults$cluster, dE2)
+plot(sk2)
+
+
+
+
+
+# used to determine average value of clusters for each variable
+clusterresults$centers
+
+names(clusterresults)
+head(clusterresults$cluster)
+
+
+
+
+# to write results to CSV (spreadsheet) file
+newdf <- as.data.frame(clusterresults$cluster)
+write.csv(newdf, file = "clusterresults.csv")
+write.csv(numsub, file = "numsub.csv")
+
+
+
+
+
+### PCA Analysis to 'see' the 'clusters'
+# use when are using other clusters besides k-means
+
+fit <- princomp(numsub.skew.40.group, cor=TRUE)
+summary(fit)
+loadings(fit)
+plot(fit,type="lines") 
+#fit$scores
+#biplot(fit)
+str(fit$scores)
+score <- data.frame(fit$scores)
+names(score)
+write.csv(score, file = "score.csv")
+newdf <- read.csv("clusterresults.csv")
+newdf$clus <- newdf$clusterresults.cluster
+PC_Clusterdata <- cbind(score,newdf)
+head(score)
+head(newdf)
+head(PC_Clusterdata)
+PC_Clusterdata$clus <- factor(PC_Clusterdata$clus)
+head(PC_Clusterdata)
+
+g1<-ggplot(PC_Clusterdata, aes(x = Comp.1, y = Comp.2)) + geom_point(aes(color=factor(clus)))
+
+g1
+
+
+
+
+
+###################  CREATE 3D Graphs #########
+my_hist3d <- function(x, y, freq=FALSE, nclass="auto") {
+  n<-length(x)
+  if (nclass == "auto") { nclass<-ceiling(sqrt(nclass.Sturges(x))) }
+  breaks.x <- seq(min(x),max(x),length=(nclass+1))
+  breaks.y <- seq(min(y),max(y),length=(nclass+1))
+  h <- NULL
+  for (i in 1:nclass) 
+    for (j in 1:nclass) 
+      h <- c(h, sum(x <= breaks.x[j+1] & x >= breaks.x[j] & y <= breaks.y[i+1] & y >= breaks.y[i] ) )
+  if (freq) h <- h / n
+  xx <- as.factor(round(mean(breaks.x[1:2])+(0:(nclass-1))*diff(breaks.x[1:2]), 1))
+  yy <- as.factor(round(mean(breaks.y[1:2])+(0:(nclass-1))*diff(breaks.y[1:2]), 1))
+  res <- cbind(expand.grid(xx,yy), h)
+  colnames(res) <- c(deparse(substitute(x)),deparse(substitute(y)),'Frequency')
+  formu <- as.formula(paste("Frequency ~ ", paste(colnames(res)[1:2], collapse= "+")))
+  cloud(formu, res, panel.3d.cloud=panel.3dbars, col.facet='lightblue', 
+        xbase=1, ybase=1, scales=list(arrows=FALSE, col=1), 
+        par.settings = list(axis.line = list(col = "transparent")))
+}
+
+library(latticeExtra)
+
+
+
+s <- read.csv("score.csv")
+x <- s$Comp.1
+y <- s$Comp.2
+my_hist3d(x, y, nclass=10)
+
+############################
+
+
+
+
+
+
+
+### Create a MDS to 'see' the 'clusters'
+# multi-dimensional scaling 
+
+d <- dist(numsub)
+fit <- cmdscale(d,eig=TRUE, k=2)
+names(fit)
+
+x <- fit$points[,1]
+y <- fit$points[,2]
+plot(x, y, xlab="Coordinate 1", ylab="Coordinate 2", 
+     main="Metric MDS", type="n")
+text(x, y, labels = row.names(numsub), cex=.7)
+
+mdsscore <- data.frame(fit$points)
+write.csv(mdsscore, file = "mdsscore.csv")
+mds <- read.csv("mdsscore.csv")
+MDS_Clusterdata <- cbind(mds,newdf)
+head(MDS_Clusterdata)
+MDS_Clusterdata$clus <- factor(MDS_Clusterdata$clus)
+
+g1<-ggplot(MDS_Clusterdata, aes(x = X1, y = X2)) + geom_point(aes(color=factor(clus)))
+g1
+
+
+x <- mds$X1
+y <- mds$X2
+my_hist3d(x, y, nclass=10)
+
+
+
+
+
+
+
+### Create a dataset with the original data with the cluster info
+### This will be useful for creating profiles for the clusters
+
+newdf <- read.csv("clusterresults.csv")
+combdata <- cbind(numsub.skew.40.group,newdf,numdata$q11,numdata$q12)
+head(combdata)
+
+require(reshape)
+combdata <- rename(combdata, c(clusterresults.cluster="cluster"))
+head(combdata)
+
+aggregate(combdata,by=list(byvar=combdata$cluster), mean)
+## Done with K Means, just profile & move on
+
+
+
+
+
+
+
+
+
+## Hierarchical Clustering
+require(maptree)
+hclustmodel <- hclust(dist(numsub.skew.40.group), method = 'complete')
+plot(hclustmodel)
+names(hclustmodel)
+
+cut.8 <- cutree(hclustmodel, k=8)
+head(cut.8)
+require(reshape)
+write.csv(cut.8, file = "cut8results.csv")
+
+##for hclust how to calculate BSS & TSS
+
+require(proxy)
+numsubmat <- as.matrix(numsub.skew.40.group)
+overallmean <- matrix(apply(numsubmat,2,mean),nrow=1)
+overallmean
+TSS <- sum(dist(numsubmat,overallmean)^2)
+TSS
+
+
+
+
+
+
+
+
+#Compute WSS based on 8 clusters
+
+combcutdata <- cbind(clusterresultsPAM,cut.8)
+head(combcutdata)
+
+require(reshape)
+combcutdata <- rename(combcutdata, c(cut.8="cluster"))
+head(combcutdata)
+
+clust1 <- subset(combcutdata, cluster == 1)
+clust1 <- subset(clust1, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust1 <- as.matrix(clust1,rowby=T)
+clust1mean <- matrix(apply(clust1,2,mean),nrow=1)
+dis1 <- sum(dist(clust1mean,clust1)^2)
+
+
+
+clust2 <- subset(combcutdata, cluster == 2)
+clust2 <- subset(clust2, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust2 <- as.matrix(clust2,rowby=T)
+clust2mean <- matrix(apply(clust2,2,mean),nrow=1)
+dis2 <- sum(dist(clust2mean,clust2)^2)
+
+clust3 <- subset(combcutdata, cluster == 3)
+clust3 <- subset(clust3, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust3 <- as.matrix(clust3,rowby=T)
+clust3mean <- matrix(apply(clust3,2,mean),nrow=1)
+dis3 <- sum(dist(clust3mean,clust3)^2)
+
+clust4 <- subset(combcutdata, cluster == 4)
+clust4 <- subset(clust4, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust4 <- as.matrix(clust4,rowby=T)
+clust4mean <- matrix(apply(clust4,2,mean),nrow=1)
+dis4 <- sum(dist(clust4mean,clust4)^2)
+
+clust5 <- subset(combcutdata, cluster == 5)
+clust5 <- subset(clust5, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust5 <- as.matrix(clust5,rowby=T)
+clust5mean <- matrix(apply(clust5,2,mean),nrow=1)
+dis5 <- sum(dist(clust5mean,clust5)^2)
+
+clust6 <- subset(combcutdata, cluster == 6)
+clust6 <- subset(clust6, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust5 <- as.matrix(clust6,rowby=T)
+clust6mean <- matrix(apply(clust6,2,mean),nrow=1)
+dis6 <- sum(dist(clust6mean,clust6)^2)
+
+clust7 <- subset(combcutdata, cluster == 7)
+clust7 <- subset(clust7, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust7 <- as.matrix(clust7,rowby=T)
+clust7mean <- matrix(apply(clust7,2,mean),nrow=1)
+dis7 <- sum(dist(clust7mean,clust7)^2)
+
+
+clust8 <- subset(combcutdata, cluster == 8)
+clust8 <- subset(clust8, select=c("q24r2","q24r3","q24r7","q24r8","q24r12",
+                                  "q25r2","q25r9","q25r10","q25r11","q26r5","q26r6","q26r9","q26r17",
+                                  "friends","leader","risk","luxury","apps","shopper"))
+clust8 <- as.matrix(clust8,rowby=T)
+clust8mean <- matrix(apply(clust8,2,mean),nrow=1)
+dis8 <- sum(dist(clust8mean,clust8)^2)
+
+
+WSS <- sum(dis1,dis2,dis3,dis4,dis5,dis6,dis7,dis8)
+WSS
+
+BSS <- TSS - WSS
+BSS
+## calculating the % of Between SS/ Total SS
+perc <- BSS/TSS
+perc
+
+
+
+
+
+
+
+
+
+### Clustering using PAM
+
+clusterresultsPAM <-pam(numsub.skew.40.group,8)
+summary(clusterresultsPAM)
+plot(clusterresultsPAM)
+
+
+
+## compare hclust vs PAM
+table(cut.8,clusterresultsPAM$clustering)
+
+## compare kmeans vs PAM
+table(clusterresults$cluster,clusterresultsPAM$clustering)
+
