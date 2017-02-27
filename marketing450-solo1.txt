@@ -1,5 +1,5 @@
 
-setwd("C:/Users/Dman/Desktop/Documents/Classes/Northwestern/PRED 450 - Marketing Analytics/assignments")
+setwd("####")
 
 load("apphappyData.RData")
 ls()
